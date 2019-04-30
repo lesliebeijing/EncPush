@@ -83,7 +83,7 @@ public class PushClient {
         }
     }
 
-    private boolean connected() {
+    public boolean connected() {
         return daemon != null && daemon.getChannel() != null && daemon.getChannel().isActive();
     }
 }

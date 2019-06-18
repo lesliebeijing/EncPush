@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SessionUtil {
-    private Logger logger = LoggerFactory.getLogger(SessionUtil.class);
     private static AttributeKey<User> sessionId = AttributeKey.valueOf("sessionId");
 
     private static Map<Integer, Channel> sessionMap = new ConcurrentHashMap<>();

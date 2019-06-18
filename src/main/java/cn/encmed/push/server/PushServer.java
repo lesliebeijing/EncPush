@@ -5,6 +5,8 @@ import cn.encmed.push.packet.MessageCodec;
 import cn.encmed.push.packet.MessagePacket;
 import cn.encmed.push.entity.Message;
 import cn.encmed.push.entity.User;
+import cn.encmed.push.server.handler.OfflineHandler;
+import cn.encmed.push.server.handler.OnlineHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -66,6 +68,8 @@ public class PushServer {
                             ch.pipeline().addLast(new IdleStateTrigger());
                             ch.pipeline().addLast(new LengthFieldBasedFrameDecoder(50000, 8, 4));
                             ch.pipeline().addLast(new MessageCodec());
+                            ch.pipeline().addLast(new OnlineHandler());
+                            ch.pipeline().addLast(new OfflineHandler());
                         }
                     });
 
@@ -89,8 +93,10 @@ public class PushServer {
      */
     public void publishToAll(Message message) {
         Collection<Channel> allChannel = SessionUtil.getAllChannel();
+        logger.debug("publishToAll {} channels size {}", message.getType(), allChannel.size());
         allChannel.forEach(channel -> {
-            MessagePacket messagePacket = new MessagePacket(message);
+            MessagePacket messagePacket = new MessagePacket();
+            messagePacket.setMessage(message);
             channel.writeAndFlush(messagePacket);
         });
     }
@@ -99,16 +105,18 @@ public class PushServer {
         if (user == null) {
             return;
         }
+        logger.debug("publishToUser {} {}", message.getType(), user.getDeviceId());
         Channel channel = SessionUtil.getChannel(user);
         if (channel != null) {
-            MessagePacket messagePacket = new MessagePacket(message);
+            MessagePacket messagePacket = new MessagePacket();
+            messagePacket.setMessage(message);
             channel.writeAndFlush(messagePacket);
         }
     }
 
     private PushServerConfig getDefaultConfig() {
         PushServerConfig defaultConfig = new PushServerConfig();
-        defaultConfig.setPort(5020);
+        defaultConfig.setPort(5589);
         defaultConfig.setSO_BACKLOG(512);
         defaultConfig.setReaderIdleTime(15000);
         return defaultConfig;

@@ -10,10 +10,6 @@ public class MessagePacket extends Packet {
         return Command.MESSAGE;
     }
 
-    public MessagePacket(Message message) {
-        this.message = message;
-    }
-
     public Message getMessage() {
         return message;
     }

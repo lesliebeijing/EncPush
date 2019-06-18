@@ -13,11 +13,14 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.timeout.IdleStateHandler;
-import io.netty.util.HashedWheelTimer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
 public class PushClient {
+    private Logger logger = LoggerFactory.getLogger(PushClient.class);
+
     private ClientDaemon daemon;
     private static volatile PushClient singleton;
 
@@ -33,13 +36,13 @@ public class PushClient {
         return singleton;
     }
 
-    public void connect(String host, int port, MessageEventListener messageEventListener) {
+    public void connect(String host, int port, ConnectStateChangeListener connectStateChangeListener, MessageEventListener messageEventListener) {
         Bootstrap bootstrap = new Bootstrap().group(new NioEventLoopGroup())
                 .channel(NioSocketChannel.class)
                 .option(ChannelOption.TCP_NODELAY, true)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000);
 
-        daemon = new ClientDaemon(bootstrap, host, port, true) {
+        daemon = new ClientDaemon(bootstrap, host, port, connectStateChangeListener, true) {
             @Override
             public ChannelHandler[] handlers() {
                 return new ChannelHandler[]{
@@ -56,6 +59,7 @@ public class PushClient {
     }
 
     public void registerToServer(String deviceId, String deviceType) {
+        logger.debug("registerToServer {} {}", deviceId, deviceType);
         OnlinePacket onlinePacket = new OnlinePacket();
         onlinePacket.setDeviceId(deviceId);
         onlinePacket.setDeviceType(deviceType);
@@ -72,8 +76,11 @@ public class PushClient {
     }
 
     private void post(Packet packet) {
+        logger.debug("post {}", packet.getCmd());
         if (connected()) {
             daemon.getChannel().writeAndFlush(packet);
+        } else {
+            logger.debug("post !!! not connected {}", packet.getCmd());
         }
     }
 

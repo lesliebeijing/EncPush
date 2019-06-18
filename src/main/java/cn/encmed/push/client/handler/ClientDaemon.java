@@ -1,5 +1,6 @@
 package cn.encmed.push.client.handler;
 
+import cn.encmed.push.client.ConnectStateChangeListener;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -23,11 +24,13 @@ public abstract class ClientDaemon extends ChannelInboundHandlerAdapter implemen
     private Channel channel;
     private HashedWheelTimer timer = new HashedWheelTimer();
     private int reconnectDelay = 5;
+    private ConnectStateChangeListener connectStateChangeListener;
 
-    public ClientDaemon(Bootstrap bootstrap, String host, int port, boolean reconnect) {
+    public ClientDaemon(Bootstrap bootstrap, String host, int port, ConnectStateChangeListener connectStateChangeListener, boolean reconnect) {
         this.bootstrap = bootstrap;
         this.host = host;
         this.port = port;
+        this.connectStateChangeListener = connectStateChangeListener;
         this.reconnect = reconnect;
     }
 
@@ -41,12 +44,20 @@ public abstract class ClientDaemon extends ChannelInboundHandlerAdapter implemen
         logger.debug("channelActive: {}", ctx.channel().remoteAddress());
         this.channel = ctx.channel();
         ctx.fireChannelActive();
+
+        if (connectStateChangeListener != null) {
+            connectStateChangeListener.onConnectStateChanged(true);
+        }
     }
 
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         logger.debug("channelInactive: {}", ctx.channel().remoteAddress());
         ctx.fireChannelInactive();
         this.channel = null;
+
+        if (connectStateChangeListener != null) {
+            connectStateChangeListener.onConnectStateChanged(false);
+        }
 
         if (this.reconnect) {
             this.attempts = 0;
